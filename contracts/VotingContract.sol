@@ -4,76 +4,45 @@ pragma solidity ^0.8.20;
 /**
  * @title BlockchainVoting
  * @author WI-Student Hochschule Reutlingen
- * @notice Prototyp: Dezentrale Wahl mit Soulbound Token (SBT) als Wahlberechtigung
+ * @notice Prototyp eines dezentralen Wahlsystems mit Soulbound Token (SBT) als Wahlberechtigung.
  *
- * ARCHITEKTUR-ÜBERBLICK:
- * ┌─────────────────────────────────────────────────────────────┐
- * │  1. Admin registriert Wähler  → SBT wird gemintet           │
- * │  2. Wähler gibt Stimme ab     → Contract prüft SBT + Duplikat│
- * │  3. Jeder kann Ergebnis lesen → Transparenz on-chain        │
- * └─────────────────────────────────────────────────────────────┘
- *
- * BEKANNTE LIMITATION (Wahlgeheimnis):
- * Ohne Zero-Knowledge Proof ist die Verknüpfung Wallet ↔ Stimme
- * theoretisch rekonstruierbar. Dieser Prototyp demonstriert die
- * Transparenz- und Fälschungsschutz-Eigenschaften, nicht die
- * vollständige Anonymität. Siehe Dokumentation Abschnitt "Ausblick ZKP".
+ * Hinweis zum Wahlgeheimnis:
+ * Ohne Zero-Knowledge Proof ist die Verknüpfung zwischen Wallet und abgegebener Stimme
+ * theoretisch rekonstruierbar. Dieser Prototyp demonstriert Transparenz und
+ * Fälschungsschutz, nicht vollständige Anonymität.
  */
 contract BlockchainVoting {
 
-    // =========================================================
-    // TYPEN & STRUKTUREN
-    // =========================================================
-
-    /// @notice Repräsentiert einen Kandidaten auf dem Stimmzettel
+    // Repräsentiert einen Kandidaten
     struct Candidate {
         uint256 id;
         string  name;
         uint256 voteCount;
     }
 
-    /// @notice Mögliche Zustände der Wahl (State Machine)
+    // Zustände der Wahl
     enum ElectionState {
-        SETUP,      // Admin richtet Wahl ein, keine Stimmabgabe möglich
-        ACTIVE,     // Stimmabgabe läuft
-        CLOSED      // Wahl beendet, nur noch Ergebnisabruf möglich
+        SETUP,   // Einrichtungsphase: Kandidaten und Wähler werden registriert
+        ACTIVE,  // Stimmabgabe läuft
+        CLOSED   // Wahl beendet
     }
-
-    // =========================================================
-    // ZUSTANDSVARIABLEN
-    // =========================================================
 
     address public admin;
     string  public electionName;
     ElectionState public state;
 
-    // SBT-Tracking: Wallet → hat einen Wahlberechtigungstoken
-    mapping(address => bool) public hasSBT;
-
-    // Verhindert Doppelwahl: Wallet → hat bereits gewählt
-    mapping(address => bool) public hasVoted;
-
-    // Kandidaten: ID (1-basiert) → Candidate-Struct
+    mapping(address => bool) public hasSBT;      // Wahlberechtigung
+    mapping(address => bool) public hasVoted;    // Doppelwahl-Verhinderung
     mapping(uint256 => Candidate) public candidates;
     uint256 public candidateCount;
-
-    // Gesamte abgegebene Stimmen (für Auswertung / Wahlbeteiligung)
     uint256 public totalVotesCast;
 
-    // =========================================================
-    // EVENTS (werden in der Blockchain gespeichert und sind
-    //         extern abrufbar — wichtig für Transparenz-Nachweis)
-    // =========================================================
-
+    // Events werden dauerhaft auf der Blockchain gespeichert
     event SBTMinted(address indexed voter);
     event SBTRevoked(address indexed voter);
     event VoteCast(address indexed voter, uint256 indexed candidateId);
     event ElectionStateChanged(ElectionState newState);
     event CandidateAdded(uint256 indexed id, string name);
-
-    // =========================================================
-    // MODIFIER (Zugriffskontrolle & Zustandsvalidierung)
-    // =========================================================
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "Nur der Admin darf das.");
@@ -90,27 +59,13 @@ contract BlockchainVoting {
         _;
     }
 
-    // =========================================================
-    // KONSTRUKTOR
-    // =========================================================
-
-    /**
-     * @param _electionName Name der Wahl, z.B. "Bundestagswahl 2025 - Simulaton"
-     */
     constructor(string memory _electionName) {
         admin        = msg.sender;
         electionName = _electionName;
         state        = ElectionState.SETUP;
     }
 
-    // =========================================================
-    // ADMIN-FUNKTIONEN: SETUP-PHASE
-    // =========================================================
-
-    /**
-     * @notice Kandidaten können nur im SETUP-Zustand hinzugefügt werden.
-     * @param _name Name des Kandidaten / der Partei
-     */
+    // Kandidat hinzufügen — nur in der Einrichtungsphase möglich
     function addCandidate(string memory _name)
         external
         onlyAdmin
@@ -125,40 +80,22 @@ contract BlockchainVoting {
         emit CandidateAdded(candidateCount, _name);
     }
 
-    /**
-     * @notice Mintet einen Soulbound Token an eine verifizierte Wallet.
-     *         Außerhalb dieses Prototyps würde hier eine Identitätsprüfung
-     *         (z.B. via Ausweis-Oracle oder verifiable Credential) stattfinden.
-     * @param _voter Wallet-Adresse des wahlberechtigten Bürgers
-     */
-    function mintSBT(address _voter)
-        external
-        onlyAdmin
-    {
-        require(_voter != address(0),  "Ungueltige Adresse.");
-        require(!hasSBT[_voter],       "Waehler hat bereits einen SBT.");
+    // Wahlberechtigung an eine Wallet-Adresse vergeben
+    function mintSBT(address _voter) external onlyAdmin {
+        require(_voter != address(0), "Ungueltige Adresse.");
+        require(!hasSBT[_voter],      "Waehler hat bereits einen SBT.");
         hasSBT[_voter] = true;
         emit SBTMinted(_voter);
     }
 
-    /**
-     * @notice Entzieht einem Wähler die Berechtigung (z.B. bei Tod oder Fehler).
-     *         Bereits abgegebene Stimmen bleiben gültig (unveränderlich).
-     */
-    function revokeSBT(address _voter)
-        external
-        onlyAdmin
-    {
+    // Wahlberechtigung entziehen (z.B. bei Fehler)
+    function revokeSBT(address _voter) external onlyAdmin {
         require(hasSBT[_voter], "Waehler hat keinen SBT.");
         hasSBT[_voter] = false;
         emit SBTRevoked(_voter);
     }
 
-    // =========================================================
-    // ADMIN-FUNKTIONEN: ZUSTANDSSTEUERUNG
-    // =========================================================
-
-    /// @notice Öffnet die Wahl — ab jetzt können Stimmen abgegeben werden.
+    // Wahl starten
     function startElection()
         external
         onlyAdmin
@@ -169,7 +106,7 @@ contract BlockchainVoting {
         emit ElectionStateChanged(ElectionState.ACTIVE);
     }
 
-    /// @notice Schließt die Wahl — keine weiteren Stimmen möglich.
+    // Wahl beenden
     function closeElection()
         external
         onlyAdmin
@@ -179,51 +116,25 @@ contract BlockchainVoting {
         emit ElectionStateChanged(ElectionState.CLOSED);
     }
 
-    // =========================================================
-    // WÄHLER-FUNKTION: STIMMABGABE
-    // =========================================================
-
-    /**
-     * @notice Gibt eine Stimme für einen Kandidaten ab.
-     *
-     * Prüfkette (wird in dieser Reihenfolge validiert):
-     *   1. Wahl ist aktiv
-     *   2. Wähler besitzt einen SBT (ist wahlberechtigt)
-     *   3. Wähler hat noch nicht gewählt (kein Doppelwahl)
-     *   4. Kandidaten-ID ist gültig
-     *
-     * @param _candidateId ID des gewählten Kandidaten (1-basiert)
-     */
+    // Stimme abgeben — prüft SBT, Doppelwahl und gültige Kandidaten-ID
     function castVote(uint256 _candidateId)
         external
         inState(ElectionState.ACTIVE)
         hasSoulboundToken
     {
-        require(!hasVoted[msg.sender],               "Stimme wurde bereits abgegeben.");
+        require(!hasVoted[msg.sender],          "Stimme wurde bereits abgegeben.");
         require(_candidateId >= 1 &&
-                _candidateId <= candidateCount,      "Ungueltige Kandidaten-ID.");
+                _candidateId <= candidateCount, "Ungueltige Kandidaten-ID.");
 
-        hasVoted[msg.sender]                  = true;
-        candidates[_candidateId].voteCount   += 1;
-        totalVotesCast                       += 1;
+        hasVoted[msg.sender]                 = true;
+        candidates[_candidateId].voteCount  += 1;
+        totalVotesCast                      += 1;
 
-        // HINWEIS ZUM WAHLGEHEIMNIS:
-        // Das Event verknüpft msg.sender mit _candidateId — on-chain nachvollziehbar.
-        // In einer produktiven Lösung würde hier ein ZKP die Anonymität sicherstellen.
         emit VoteCast(msg.sender, _candidateId);
     }
 
-    // =========================================================
-    // LESEFUNKTIONEN: ERGEBNISSE (öffentlich, kein Gas-Verbrauch)
-    // =========================================================
-
-    /**
-     * @notice Gibt den Stimmanteil eines einzelnen Kandidaten zurück.
-     * @return name       Name des Kandidaten
-     * @return voteCount  Absolute Stimmanzahl
-     * @return percentage Prozentualer Anteil (skaliert mit 100 für 2 Dezimalstellen,
-     *                    d.h. 4250 = 42.50%)
-     */
+    // Ergebnis eines einzelnen Kandidaten abrufen
+    // Prozentwert ist mit Faktor 100 skaliert (4250 = 42.50%)
     function getCandidateResult(uint256 _candidateId)
         external
         view
@@ -231,19 +142,12 @@ contract BlockchainVoting {
     {
         require(_candidateId >= 1 && _candidateId <= candidateCount, "Ungueltige ID.");
         Candidate storage c = candidates[_candidateId];
-        name      = c.name;
-        voteCount = c.voteCount;
-        percentage = totalVotesCast > 0
-            ? (c.voteCount * 10000) / totalVotesCast
-            : 0;
+        name       = c.name;
+        voteCount  = c.voteCount;
+        percentage = totalVotesCast > 0 ? (c.voteCount * 10000) / totalVotesCast : 0;
     }
 
-    /**
-     * @notice Gibt die ID des Gewinners zurück (Kandidat mit den meisten Stimmen).
-     *         Nur nach Wahlende aufrufbar.
-     * @dev Bei Stimmengleichheit gewinnt der Kandidat mit der niedrigeren ID.
-     *      Für echte Wahlen müsste ein Stichwahl-Mechanismus implementiert werden.
-     */
+    // Gewinner ermitteln — nur nach Wahlende aufrufbar
     function getWinner()
         external
         view
@@ -251,22 +155,18 @@ contract BlockchainVoting {
         returns (uint256 winnerId, string memory winnerName, uint256 winnerVotes)
     {
         require(totalVotesCast > 0, "Keine Stimmen abgegeben.");
-
         uint256 maxVotes = 0;
         for (uint256 i = 1; i <= candidateCount; i++) {
             if (candidates[i].voteCount > maxVotes) {
-                maxVotes  = candidates[i].voteCount;
-                winnerId  = i;
+                maxVotes = candidates[i].voteCount;
+                winnerId = i;
             }
         }
         winnerName  = candidates[winnerId].name;
         winnerVotes = candidates[winnerId].voteCount;
     }
 
-    /**
-     * @notice Vollständige Ergebnisübersicht — alle Kandidaten auf einmal.
-     *         Praktisch für eine Frontend-Integration.
-     */
+    // Alle Kandidaten und Ergebnisse auf einmal abrufen
     function getAllResults()
         external
         view
@@ -287,19 +187,8 @@ contract BlockchainVoting {
         }
     }
 
-    // =========================================================
-    // HILFSFUNKTIONEN
-    // =========================================================
-
-    /**
-     * @notice Gibt den aktuellen Zustand der Wahl als lesbaren String zurück.
-     *         Nützlich für Frontend-Anzeige.
-     */
-    function getElectionStatus()
-        external
-        view
-        returns (string memory)
-    {
+    // Aktuellen Status als lesbaren String zurückgeben
+    function getElectionStatus() external view returns (string memory) {
         if (state == ElectionState.SETUP)   return "SETUP: Wahl wird vorbereitet";
         if (state == ElectionState.ACTIVE)  return "AKTIV: Stimmabgabe laeuft";
         return                                     "GESCHLOSSEN: Wahl beendet";
