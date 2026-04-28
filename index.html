@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blockchain Wahl</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0a0c10;
+      --surface:   #111318;
+      --border:    #1e222c;
+      --accent:    #4ade80;
+      --accent2:   #22d3ee;
+      --danger:    #f87171;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --card:      #13171f;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 15px;
+      min-height: 100vh;
+      padding: 0 0 60px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: rgba(10,12,16,0.92);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+    }
+    .logo {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .logo span { color: var(--muted); }
+
+    #btn-connect {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 8px 18px;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: background 0.2s, color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #btn-connect:hover { background: var(--accent); color: #000; }
+    #btn-connect:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── MAIN ── */
+    main { max-width: 780px; margin: 0 auto; padding: 40px 24px; }
+
+    /* ── ELECTION TITLE ── */
+    .election-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .election-sub {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'IBM Plex Mono', monospace;
+      margin-bottom: 28px;
+    }
+
+    /* ── WALLET CARD ── */
+    .wallet-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .wallet-label { font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 3px; }
+    .wallet-addr  { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--accent2); }
+    .badges       { display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid;
+      letter-spacing: 0.06em;
+    }
+    .badge.sbt   { border-color: var(--accent);  color: var(--accent);  background: rgba(74,222,128,0.08); }
+    .badge.voted { border-color: var(--accent2); color: var(--accent2); background: rgba(34,211,238,0.08); }
+    .badge.no    { border-color: var(--danger);  color: var(--danger);  background: rgba(248,113,113,0.08); }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+    .status-dot.active  { background: var(--accent);  box-shadow: 0 0 8px var(--accent); animation: pulse 2s infinite; }
+    .status-dot.closed  { background: var(--danger); }
+    .status-dot.setup   { background: var(--accent2); }
+    @keyframes pulse {
+      0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+    #total-votes { margin-left: auto; color: var(--muted); }
+
+    /* ── MSG ── */
+    .msg {
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .msg.error   { background: rgba(248,113,113,0.1); border: 1px solid var(--danger); color: var(--danger); display: block; }
+    .msg.success { background: rgba(74,222,128,0.1);  border: 1px solid var(--accent); color: var(--accent);  display: block; }
+    .msg.info    { background: rgba(34,211,238,0.1);  border: 1px solid var(--accent2); color: var(--accent2); display: block; }
+
+    /* ── SECTION LABEL ── */
+    .section-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    /* ── CANDIDATE CARDS ── */
+    #candidates-grid { display: flex; flex-direction: column; gap: 12px; }
+
+    .candidate-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      transition: border-color 0.2s;
+    }
+    .candidate-card:hover { border-color: #2e3444; }
+
+    .candidate-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .candidate-id {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+    .candidate-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .candidate-votes {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--accent);
+      text-align: right;
+    }
+    .candidate-votes-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: right;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* progress bar */
+    .progress-track {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.6s ease;
+    }
+
+    .btn-vote {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 9px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: background 0.2s, color 0.2s;
+      width: 100%;
+    }
+    .btn-vote:hover:not(:disabled) { background: var(--accent); color: #000; }
+    .btn-vote:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ── WINNER BANNER ── */
+    #winner-banner {
+      display: none;
+      background: rgba(74,222,128,0.06);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    #winner-banner .trophy { font-size: 36px; margin-bottom: 8px; }
+    #winner-banner .winner-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    #winner-banner .winner-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* ── CONNECT PROMPT ── */
+    #connect-prompt {
+      text-align: center;
+      padding: 60px 0;
+      color: var(--muted);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+    }
+    #connect-prompt .icon { font-size: 32px; margin-bottom: 12px; }
+
+    .requires-wallet { display: none; }
+
+    /* ── FOOTER ── */
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      padding: 10px 32px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    footer a { color: var(--accent2); text-decoration: none; }
+
+    /* ── SPINNER ── */
+    .spinner {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⬡ Blockchain<span>Wahl</span></div>
+  <button id="btn-connect" onclick="connectWallet()">Wallet verbinden</button>
+</header>
+
+<main>
+  <div class="election-name" id="election-name">Lade…</div>
+  <div class="election-sub">Ethereum · Sepolia Testnetz</div>
+
+  <!-- Wallet info (sichtbar nach Connect) -->
+  <div class="wallet-card requires-wallet" id="wallet-card">
+    <div>
+      <div class="wallet-label">Verbundene Wallet</div>
+      <div class="wallet-addr" id="wallet-addr">–</div>
+    </div>
+    <div class="badges" id="wallet-badges"></div>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar requires-wallet">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Lade…</span>
+    <span id="total-votes"></span>
+  </div>
+
+  <!-- Nachrichten -->
+  <div class="msg" id="msg"></div>
+
+  <!-- Connect-Aufforderung (sichtbar vor Connect) -->
+  <div id="connect-prompt">
+    <div class="icon">🔐</div>
+    Wallet verbinden um abzustimmen
+  </div>
+
+  <!-- Gewinner-Banner (nur wenn Wahl geschlossen) -->
+  <div id="winner-banner">
+    <div class="trophy">🏆</div>
+    <div class="winner-label">Gewinner</div>
+    <div class="winner-name" id="winner-name">–</div>
+  </div>
+
+  <!-- Kandidaten -->
+  <div class="requires-wallet">
+    <div class="section-label">Kandidaten</div>
+    <div id="candidates-grid"></div>
+  </div>
+</main>
+
+<footer>
+  <span>Prototyp · Sepolia Testnetz</span>
+  <a id="etherscan-link" href="#" target="_blank">Etherscan ↗</a>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<script>
+// ════════════════════════════════════════════════════
+//  ⚙️  KONFIGURATION — Contract-Adresse hier eintragen
+// ════════════════════════════════════════════════════
+const CONTRACT_ADDRESS = "0x58e5551f2046Cec98677Ba8861164460fB456a8C";
+
+//CONTRACT_ADRESS = Sepolia Contract Adress des deployed contract.
+
+const ABI = [
+  "function electionName() view returns (string)",
+  "function getElectionStatus() view returns (string)",
+  "function candidateCount() view returns (uint256)",
+  "function totalVotesCast() view returns (uint256)",
+  "function hasSBT(address) view returns (bool)",
+  "function hasVoted(address) view returns (bool)",
+  "function getAllResults() view returns (uint256[], string[], uint256[])",
+  "function castVote(uint256 _candidateId)",
+  "event VoteCast(address indexed voter, uint256 indexed candidateId)"
+];
+
+// ════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════
+let provider, signer, contract, userAddress;
+let userHasSBT = false, userHasVoted = false, electionStatus = "";
+
+// ════════════════════════════════════════════════════
+//  WALLET VERBINDEN
+// ════════════════════════════════════════════════════
+async function connectWallet() {
+  if (!window.ethereum) {
+    showMsg("MetaMask nicht gefunden. Bitte installieren.", "error");
+    return;
+  }
+  const btn = document.getElementById("btn-connect");
+  btn.innerHTML = '<span class="spinner"></span> Verbinde…';
+  btn.disabled = true;
+
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer      = await provider.getSigner();
+    userAddress = await signer.getAddress();
+    contract    = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+    // Netzwerk prüfen — Sepolia = 11155111
+    const network = await provider.getNetwork();
+    if (network.chainId !== 11155111n) {
+      showMsg("Bitte zu Sepolia Testnetz wechseln.", "error");
+      btn.textContent = "Wallet verbinden";
+      btn.disabled = false;
+      return;
+    }
+
+    // UI umschalten
+    btn.textContent = userAddress.slice(0,6) + "…" + userAddress.slice(-4);
+    document.getElementById("wallet-addr").textContent = userAddress;
+    document.querySelectorAll(".requires-wallet").forEach(el => el.style.display = "flex");
+    document.getElementById("connect-prompt").style.display = "none";
+    document.getElementById("etherscan-link").href =
+      `https://sepolia.etherscan.io/address/${CONTRACT_ADDRESS}`;
+
+    await loadAll();
+    listenEvents();
+
+  } catch (e) {
+    showMsg("Verbindung fehlgeschlagen: " + (e.message || e), "error");
+    btn.textContent = "Wallet verbinden";
+    btn.disabled = false;
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  DATEN LADEN
+// ════════════════════════════════════════════════════
+async function loadAll() {
+  const [name, status, total, hasSBT, hasVoted, results] = await Promise.all([
+    contract.electionName(),
+    contract.getElectionStatus(),
+    contract.totalVotesCast(),
+    contract.hasSBT(userAddress),
+    contract.hasVoted(userAddress),
+    contract.getAllResults()
+  ]);
+
+  electionStatus = status;
+  userHasSBT     = hasSBT;
+  userHasVoted   = hasVoted;
+
+  document.getElementById("election-name").textContent = name;
+  renderStatus(status, total);
+  renderBadges(hasSBT, hasVoted);
+  renderCandidates(results);
+  renderWinner(status, results);
+}
+
+function renderStatus(status, total) {
+  const dot  = document.getElementById("status-dot");
+  const text = document.getElementById("status-text");
+  const tv   = document.getElementById("total-votes");
+
+  dot.className = "status-dot";
+  if (status.includes("AKTIV"))       { dot.classList.add("active");  text.textContent = "Wahl läuft"; }
+  else if (status.includes("GESCHL")) { dot.classList.add("closed");  text.textContent = "Wahl beendet"; }
+  else                                { dot.classList.add("setup");   text.textContent = "Einrichtungsphase"; }
+
+  tv.textContent = `${total} Stimme${total === 1n ? "" : "n"}`;
+}
+
+function renderBadges(hasSBT, hasVoted) {
+  const c = document.getElementById("wallet-badges");
+  c.innerHTML = "";
+  const sbtBadge = document.createElement("div");
+  sbtBadge.className = "badge " + (hasSBT ? "sbt" : "no");
+  sbtBadge.textContent = hasSBT ? "✓ SBT" : "✗ Kein SBT";
+  c.appendChild(sbtBadge);
+
+  if (hasSBT) {
+    const vBadge = document.createElement("div");
+    vBadge.className = "badge " + (hasVoted ? "voted" : "sbt");
+    vBadge.textContent = hasVoted ? "✓ Abgestimmt" : "Noch nicht abgestimmt";
+    c.appendChild(vBadge);
+  }
+}
+
+function renderCandidates(results) {
+  const [ids, names, votes] = results;
+  const grid = document.getElementById("candidates-grid");
+  grid.innerHTML = "";
+
+  const totalVotes = votes.reduce((a, b) => a + b, 0n);
+  const canVote = electionStatus.includes("AKTIV") && userHasSBT && !userHasVoted;
+
+  for (let i = 0; i < names.length; i++) {
+    const pct = totalVotes > 0n
+      ? Number((votes[i] * 10000n) / totalVotes) / 100
+      : 0;
+
+    const card = document.createElement("div");
+    card.className = "candidate-card";
+    card.innerHTML = `
+      <div class="candidate-top">
+        <div>
+          <div class="candidate-id">KANDIDAT #${ids[i]}</div>
+          <div class="candidate-name">${names[i]}</div>
+        </div>
+        <div>
+          <div class="candidate-votes">${votes[i]}</div>
+          <div class="candidate-votes-label">${pct.toFixed(1)}%</div>
+        </div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="bar-${i}" style="width:${pct}%"></div>
+      </div>
+      <button class="btn-vote" ${canVote ? "" : "disabled"}
+        onclick="castVote(${ids[i]})">
+        ${userHasVoted ? "Bereits abgestimmt" : !userHasSBT ? "Kein SBT" : !electionStatus.includes("AKTIV") ? "Wahl nicht aktiv" : "Abstimmen"}
+      </button>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+function renderWinner(status, results) {
+  if (!status.includes("GESCHL")) return;
+  const [ids, names, votes] = results;
+  let maxIdx = 0;
+  for (let i = 1; i < votes.length; i++) {
+    if (votes[i] > votes[maxIdx]) maxIdx = i;
+  }
+  document.getElementById("winner-banner").style.display = "block";
+  document.getElementById("winner-name").textContent = names[maxIdx] + " (" + votes[maxIdx] + " Stimmen)";
+}
+
+// ════════════════════════════════════════════════════
+//  ABSTIMMEN
+// ════════════════════════════════════════════════════
+async function castVote(candidateId) {
+  showMsg("Transaktion wird gesendet…", "info");
+  try {
+    const tx = await contract.castVote(candidateId);
+    showMsg("Transaktion gesendet. Warte auf Bestätigung…", "info");
+    await tx.wait();
+    showMsg("Stimme erfolgreich abgegeben!", "success");
+    await loadAll();
+  } catch (e) {
+    const msg = e?.reason || e?.message || "Transaktion fehlgeschlagen";
+    showMsg(msg, "error");
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  EVENTS
+// ════════════════════════════════════════════════════
+function listenEvents() {
+  contract.on("VoteCast", async () => {
+    await loadAll();
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  HILFSFUNKTIONEN
+// ════════════════════════════════════════════════════
+function showMsg(text, type) {
+  const el = document.getElementById("msg");
+  el.textContent = text;
+  el.className = "msg " + type;
+}
+</script>
+</body>
+</html>
