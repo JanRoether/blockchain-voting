@@ -60,7 +60,7 @@ Den Contract unter **Deployed Contracts** aufklappen und folgende Funktionen der
 ```
 addCandidate → "SPD"
 addCandidate → "CDU"
-addCandidate → "Gruene"
+addCandidate → "FDP"
 ```
 
 ### Wähler registrieren
