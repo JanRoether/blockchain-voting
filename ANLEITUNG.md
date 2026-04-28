@@ -60,7 +60,7 @@ Den Contract unter **Deployed Contracts** aufklappen und folgende Funktionen der
 ```
 addCandidate → "SPD"
 addCandidate → "CDU"
-addCandidate → "FDP"
+addCandidate → "Gruene"
 ```
 
 ### Wähler registrieren
@@ -118,15 +118,38 @@ https://DEIN-USERNAME.github.io/REPO-NAME
 
 ---
 
-## Schritt 7 — Wahl beenden (optional)
+## Schritt 7 — Wahl beenden und auswerten
 
-In Remix unter Deployed Contracts:
+### Wahl schließen
+
+In Remix unter **Deployed Contracts**:
 
 ```
 closeElection → klicken → MetaMask bestätigen
 ```
 
-Danach zeigt das Frontend den Gewinner mit Trophäen-Symbol.
+Kontrolle: `getElectionStatus` aufrufen → muss `"GESCHLOSSEN: Wahl beendet"` zurückgeben.
+
+### Ergebnis im Frontend
+
+GitHub Pages Seite neu laden → Wallet verbinden → das Frontend zeigt:
+
+- Status wechselt auf **"Wahl beendet"** (roter Punkt)
+- Gewinner-Banner mit Trophäe erscheint, z.B.: **CDU (1 Stimmen)**
+- Alle Kandidatenkarten zeigen finale Stimmenanzahl und Prozentanteile
+- Abstimmen-Buttons sind dauerhaft deaktiviert
+
+### Ergebnis in Remix abrufen (optional)
+
+Zusätzlich kann das Ergebnis direkt über den Contract abgefragt werden:
+
+```
+getWinner             → Gewinner-ID, Name und Stimmenanzahl
+getAllResults          → alle Kandidaten mit Stimmen auf einmal
+getCandidateResult(1) → Ergebnis eines einzelnen Kandidaten inkl. Prozentanteil
+```
+
+Der Prozentwert ist mit Faktor 100 skaliert — `10000` bedeutet `100.00%`.
 
 ---
 
