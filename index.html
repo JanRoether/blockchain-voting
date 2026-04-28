@@ -70,7 +70,7 @@
     #btn-connect:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* ── MAIN ── */
-    main { max-width: 780px; margin: 0 auto; padding: 40px 24px; }
+    main { max-width: 1200px; margin: 0 auto; padding: 40px 32px; }
 
     /* ── ELECTION TITLE ── */
     .election-name {
@@ -166,8 +166,8 @@
     }
 
     /* ── CANDIDATE CARDS ── */
-    #candidates-grid { display: flex; flex-direction: column; gap: 12px; }
-
+    #candidates-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    
     .candidate-card {
       background: var(--card);
       border: 1px solid var(--border);
