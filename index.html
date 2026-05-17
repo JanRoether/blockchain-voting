@@ -202,7 +202,12 @@
     }
 
     /* ── CANDIDATE CARDS ── */
-    #candidates-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    #candidates-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      width: 100%;
+    }
     
     .candidate-card {
       background: var(--card);
@@ -478,7 +483,9 @@ async function connectWallet() {
     // UI umschalten
     btn.textContent = userAddress.slice(0,6) + "…" + userAddress.slice(-4);
     document.getElementById("wallet-addr").textContent = userAddress;
-    document.querySelectorAll(".requires-wallet").forEach(el => el.style.display = "flex");
+    document.querySelectorAll(".requires-wallet").forEach(el => {
+      el.style.display = el.classList.contains("wallet-card") || el.classList.contains("status-bar") ? "flex" : "block";
+    });
     document.getElementById("connect-prompt").style.display = "none";
     document.getElementById("etherscan-link").href =
       `https://sepolia.etherscan.io/address/${CONTRACT_ADDRESS}`;
