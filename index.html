@@ -51,6 +51,42 @@
     }
     .logo span { color: var(--muted); }
 
+    .contract-config {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .contract-config input {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 4px;
+      width: 300px;
+      letter-spacing: 0.04em;
+      transition: border-color 0.2s;
+    }
+    .contract-config input:focus {
+      outline: none;
+      border-color: var(--accent2);
+    }
+    .contract-config input::placeholder { color: var(--muted); }
+    .contract-config button {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      background: transparent;
+      border: 1px solid var(--accent2);
+      color: var(--accent2);
+      padding: 8px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: background 0.2s, color 0.2s;
+    }
+    .contract-config button:hover { background: var(--accent2); color: #000; }
+    
     #btn-connect {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 12px;
@@ -311,8 +347,8 @@
 
 <header>
   <div class="logo">⬡ Blockchain<span>Wahl</span></div>
-  <div style="display:flex; align-items:center; gap:0.5rem;">
-    <input id="contract-input" type="text" placeholder="Contract-Adresse (0x...)" style="width:320px; padding:0.4rem;" />
+   <div class="contract-config">
+    <input id="contract-input" type="text" placeholder="Contract-Adresse (0x...)" />
     <button onclick="setContractAddress()">Setzen</button>
   </div>
   <button id="btn-connect" onclick="connectWallet()">Wallet verbinden</button>
