@@ -311,6 +311,10 @@
 
 <header>
   <div class="logo">⬡ Blockchain<span>Wahl</span></div>
+  <div style="display:flex; align-items:center; gap:0.5rem;">
+    <input id="contract-input" type="text" placeholder="Contract-Adresse (0x...)" style="width:320px; padding:0.4rem;" />
+    <button onclick="setContractAddress()">Setzen</button>
+  </div>
   <button id="btn-connect" onclick="connectWallet()">Wallet verbinden</button>
 </header>
 
@@ -367,8 +371,20 @@
 // ════════════════════════════════════════════════════
 //  ⚙️  KONFIGURATION — Contract-Adresse hier eintragen
 // ════════════════════════════════════════════════════
-const CONTRACT_ADDRESS = "0x58e5551f2046Cec98677Ba8861164460fB456a8C";
+let CONTRACT_ADDRESS = localStorage.getItem("contractAddress") || "";
 
+function setContractAddress() {
+  const addr = document.getElementById("contract-input").value.trim();
+  if (!ethers.isAddress(addr)) { alert("Ungültige Adresse"); return; }
+  localStorage.setItem("contractAddress", addr);
+  CONTRACT_ADDRESS = addr;
+  location.reload();
+}
+
+window.addEventListener("load", () => {
+  const saved = localStorage.getItem("contractAddress");
+  if (saved) document.getElementById("contract-input").value = saved;
+});
 //CONTRACT_ADRESS = Sepolia Contract Adress des deployed contract.
 
 const ABI = [
@@ -406,6 +422,12 @@ async function connectWallet() {
     await provider.send("eth_requestAccounts", []);
     signer      = await provider.getSigner();
     userAddress = await signer.getAddress();
+    if (!CONTRACT_ADDRESS) {
+      showMsg("Bitte zuerst eine Contract-Adresse setzen.", "error");
+      btn.textContent = "Wallet verbinden";
+      btn.disabled = false;
+      return;
+      }
     contract    = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
     // Netzwerk prüfen — Sepolia = 11155111
